@@ -82,6 +82,56 @@
         .btn-entrar { background: #366092; color: white; }
         .btn-cancelar { background: #eee; color: #444; }
 
+        /* Modal de notas por materia */
+        .nota-overlay {
+            display: none;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 200; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .nota-overlay.visivel { display: flex; }
+        .nota-box {
+            background: white; border-radius: 10px; padding: 26px 28px; width: 460px; max-width: 100%;
+            max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .nota-box h3 { color: #2a4a7c; margin-bottom: 2px; }
+        .nota-box .nota-matricula { font-size: 0.82em; color: #777; margin-bottom: 14px; }
+        .nota-box .nota-final-linha {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f5f6fa; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;
+        }
+        .nota-box .nota-final-linha strong { color: #366092; }
+        .nota-box .nota-final-linha input {
+            width: 90px; padding: 6px 8px; border: 2px solid #ddd; border-radius: 5px;
+            font-size: 0.9em; text-align: right; font-weight: 600; color: #366092;
+        }
+        .nota-materias-tabela { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .nota-materias-tabela th {
+            text-align: left; font-size: 0.78em; text-transform: uppercase; color: #777;
+            padding: 6px 8px; border-bottom: 2px solid #e0e0e0;
+        }
+        .nota-materias-tabela td { padding: 7px 8px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+        .nota-materias-tabela td.nota-materia-valor { text-align: right; font-variant-numeric: tabular-nums; }
+        .nota-materias-tabela input {
+            width: 70px; padding: 5px 7px; border: 2px solid #ddd; border-radius: 4px;
+            font-size: 0.88em; text-align: right;
+        }
+        .nota-materias-tabela input:focus { outline: none; border-color: #667eea; }
+        .nota-vazio { text-align: center; padding: 16px; color: #999; font-style: italic; font-size: 0.9em; }
+        .nota-add-materia { display: none; gap: 6px; margin-top: 10px; }
+        .nota-add-materia.visivel { display: flex; }
+        .nota-add-materia input {
+            padding: 7px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em;
+        }
+        .nota-add-materia input[name="materia"] { flex: 1; }
+        .nota-add-materia input[name="nota"] { width: 80px; }
+        .nota-box .nota-actions { display: flex; gap: 8px; margin-top: 18px; }
+        .nota-box .nota-actions button {
+            flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.88em;
+        }
+        .btn-fechar-nota { background: #eee; color: #444; }
+
         .content { padding: 26px 30px; }
 
         .admin-bar {
@@ -150,6 +200,10 @@
         tbody td { padding: 11px 14px; border-bottom: 1px solid #eee; font-size: 0.92em; }
         tbody tr:hover { background: #f8f9ff; }
         td.nota { font-variant-numeric: tabular-nums; font-weight: 600; color: #366092; }
+        .nota-link {
+            cursor: pointer; text-decoration: underline dashed; text-underline-offset: 3px;
+        }
+        .nota-link:hover { color: #764ba2; }
         td.classif { font-weight: 700; color: #764ba2; width: 60px; }
         .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 700; }
         .badge-ac { background: #e8eefc; color: #2a4a7c; }
@@ -204,6 +258,34 @@
             <div class="login-actions">
                 <button class="btn-cancelar" onclick="fecharLogin()">Cancelar</button>
                 <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nota-overlay" id="notaOverlay">
+        <div class="nota-box">
+            <h3 id="notaModalNome">-</h3>
+            <div class="nota-matricula">Matrícula: <span id="notaModalMatricula">-</span></div>
+            <div class="nota-final-linha">
+                <strong>Nota final</strong>
+                <span id="notaModalFinalTexto"></span>
+                <input type="text" id="notaModalFinalInput" style="display:none;">
+            </div>
+            <table class="nota-materias-tabela">
+                <thead>
+                    <tr><th>Matéria</th><th style="text-align:right;">Nota</th></tr>
+                </thead>
+                <tbody id="notaModalMateriasBody"></tbody>
+            </table>
+            <div id="notaModalVazio" class="nota-vazio" style="display:none;">Nenhuma nota por matéria cadastrada para este candidato.</div>
+            <button class="btn-admin btn-add" id="btnMostrarAddMateria" style="display:none;" onclick="toggleAddMateria()">+ Adicionar matéria</button>
+            <div class="nota-add-materia" id="addMateriaForm">
+                <input type="text" name="materia" placeholder="Nome da matéria">
+                <input type="text" name="nota" placeholder="Nota">
+                <button class="btn-admin btn-add" onclick="confirmarAdicionarMateria()">Salvar</button>
+            </div>
+            <div class="nota-actions">
+                <button class="btn-fechar-nota" onclick="fecharNotaModal()">Fechar</button>
             </div>
         </div>
     </div>
@@ -499,6 +581,133 @@
             if (campo === 'modalidade') atualizarStatsHeader();
         }
 
+        // ---------------- Modal de notas por matéria ----------------
+
+        let notaModalCandidatoId = null;
+        let notaModalMaterias = [];
+
+        async function abrirNotaModal(candidatoId) {
+            const c = todosCandidatos.find(x => x.id === candidatoId);
+            if (!c) return;
+            notaModalCandidatoId = candidatoId;
+
+            document.getElementById('notaModalNome').textContent = c.nome;
+            document.getElementById('notaModalMatricula').textContent = c.matricula || '-';
+
+            const finalTexto = document.getElementById('notaModalFinalTexto');
+            const finalInput = document.getElementById('notaModalFinalInput');
+            if (adminMode) {
+                finalTexto.style.display = 'none';
+                finalInput.style.display = '';
+                finalInput.value = c.nota;
+                finalInput.onblur = () => commitNotaFinalModal(candidatoId, finalInput.value);
+            } else {
+                finalTexto.style.display = '';
+                finalInput.style.display = 'none';
+                finalTexto.textContent = c.nota;
+            }
+
+            document.getElementById('btnMostrarAddMateria').style.display = adminMode ? '' : 'none';
+            document.getElementById('addMateriaForm').classList.remove('visivel');
+            document.getElementById('addMateriaForm').querySelectorAll('input').forEach(i => i.value = '');
+
+            document.getElementById('notaOverlay').classList.add('visivel');
+            await carregarNotasMaterias(candidatoId);
+        }
+
+        async function carregarNotasMaterias(candidatoId) {
+            const tbody = document.getElementById('notaModalMateriasBody');
+            const vazio = document.getElementById('notaModalVazio');
+            tbody.innerHTML = '';
+
+            const { data, error } = await supabaseClient
+                .from('notas_materias')
+                .select('*')
+                .eq('candidato_id', candidatoId)
+                .order('ordem', { ascending: true });
+
+            if (error) {
+                vazio.style.display = '';
+                vazio.textContent = 'Erro ao carregar notas: ' + error.message;
+                return;
+            }
+
+            notaModalMaterias = data || [];
+
+            if (notaModalMaterias.length === 0) {
+                vazio.style.display = '';
+                vazio.textContent = 'Nenhuma nota por matéria cadastrada para este candidato.';
+                return;
+            }
+            vazio.style.display = 'none';
+
+            notaModalMaterias.forEach(m => {
+                const tr = document.createElement('tr');
+                if (adminMode) {
+                    tr.innerHTML = `
+                        <td>${escapeHtml(m.materia)}</td>
+                        <td class="nota-materia-valor"><input type="text" value="${m.nota ?? ''}"></td>
+                    `;
+                    const input = tr.querySelector('input');
+                    input.addEventListener('blur', () => commitNotaMateria(m.id, input.value));
+                } else {
+                    tr.innerHTML = `
+                        <td>${escapeHtml(m.materia)}</td>
+                        <td class="nota-materia-valor">${m.nota ?? '-'}</td>
+                    `;
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        function fecharNotaModal() {
+            document.getElementById('notaOverlay').classList.remove('visivel');
+            notaModalCandidatoId = null;
+        }
+
+        async function commitNotaMateria(notaMateriaId, valor) {
+            valor = valor.trim();
+            const n = parseFloat(valor.replace(',', '.'));
+            if (isNaN(n)) return;
+
+            const { error } = await supabaseClient.from('notas_materias').update({ nota: n }).eq('id', notaMateriaId);
+            if (error) { alert('Não foi possível salvar: ' + error.message); return; }
+
+            const m = notaModalMaterias.find(x => x.id === notaMateriaId);
+            if (m) m.nota = n;
+        }
+
+        async function commitNotaFinalModal(candidatoId, valor) {
+            await commitEdicao(candidatoId, 'nota', valor);
+            renderizarTabela();
+        }
+
+        function toggleAddMateria() {
+            document.getElementById('addMateriaForm').classList.toggle('visivel');
+        }
+
+        async function confirmarAdicionarMateria() {
+            const form = document.getElementById('addMateriaForm');
+            const materia = form.querySelector('[name="materia"]').value.trim();
+            const notaStr = form.querySelector('[name="nota"]').value.trim();
+            if (!materia) { alert('Informe o nome da matéria.'); return; }
+            const nota = parseFloat(notaStr.replace(',', '.'));
+
+            const maiorOrdem = notaModalMaterias.reduce((max, m) => Math.max(max, m.ordem), 0);
+            const { error } = await supabaseClient.from('notas_materias').insert({
+                candidato_id: notaModalCandidatoId,
+                materia,
+                nota: isNaN(nota) ? null : nota,
+                ordem: maiorOrdem + 1
+            });
+
+            if (error) { alert('Não foi possível adicionar: ' + error.message); return; }
+
+            form.querySelectorAll('input').forEach(i => i.value = '');
+            form.classList.remove('visivel');
+            await carregarNotasMaterias(notaModalCandidatoId);
+        }
+
         // ---------------- Busca / Filtro / Paginação ----------------
 
         function filtrarPor(modalidade, btnEl) {
@@ -557,7 +766,7 @@
                             <td><strong>${escapeHtml(c.nome)}</strong></td>
                             <td>${escapeHtml(c.matricula)}</td>
                             <td><span class="badge ${badgeClass}">${c.modalidade}</span></td>
-                            <td class="nota">${c.nota}</td>
+                            <td class="nota"><span class="nota-link" onclick="abrirNotaModal(${c.id})">${c.nota}</span></td>
                             <td class="nota">${c.acertos}</td>
                         `;
                     } else {
@@ -567,7 +776,7 @@
                             <td contenteditable="true" data-field="nome">${escapeHtml(c.nome)}</td>
                             <td contenteditable="true" data-field="matricula">${escapeHtml(c.matricula)}</td>
                             <td></td>
-                            <td class="nota" contenteditable="true" data-field="nota">${c.nota}</td>
+                            <td class="nota"><span class="nota-link" onclick="abrirNotaModal(${c.id})">${c.nota}</span></td>
                             <td class="nota" contenteditable="true" data-field="acertos">${c.acertos}</td>
                             <td class="row-acoes">
                                 <button title="Mover para cima" onclick="moverCandidato(${c.id}, -1)">▲</button>

@@ -34,3 +34,30 @@ create policy "Escrita somente autenticado"
     for all
     using (auth.role() = 'authenticated')
     with check (auth.role() = 'authenticated');
+
+-- Notas por materia (detalhamento da nota final de cada candidato).
+-- Mesma logica de RLS da tabela candidatos: leitura publica, escrita so autenticado.
+create table if not exists public.notas_materias (
+    id bigint generated always as identity primary key,
+    candidato_id bigint not null references public.candidatos(id) on delete cascade,
+    materia text not null,
+    nota numeric,
+    ordem integer not null default 0
+);
+
+create index if not exists notas_materias_candidato_idx on public.notas_materias (candidato_id);
+
+alter table public.notas_materias enable row level security;
+
+drop policy if exists "Leitura publica" on public.notas_materias;
+create policy "Leitura publica"
+    on public.notas_materias
+    for select
+    using (true);
+
+drop policy if exists "Escrita somente autenticado" on public.notas_materias;
+create policy "Escrita somente autenticado"
+    on public.notas_materias
+    for all
+    using (auth.role() = 'authenticated')
+    with check (auth.role() = 'authenticated');

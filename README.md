@@ -4,20 +4,23 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 
 ## Arquivos
 
-- **cadastro-reserva-cspm.html** - Interface web com:
+- **index.html** - Interface web com:
   - Busca por nome ou matrícula
   - Filtro por modalidade (AC/PN)
   - Paginação
   - Modo admin com edição inline (requer login)
   - Movimentação de candidatos entre posições
+  - Nota clicável, abre modal com o detalhamento por matéria (editável pelo admin)
 
 - **supabase_schema.sql** - Schema do banco de dados Supabase com:
   - Tabela de candidatos
-  - Row Level Security (RLS) para segurança
+  - Tabela de notas por matéria (`notas_materias`), ligada a cada candidato
+  - Row Level Security (RLS) para segurança em ambas as tabelas
   - Política de leitura pública (qualquer pessoa vê)
   - Política de escrita apenas para usuários autenticados
 
 - **supabase_seed.sql** - Dados iniciais com 1780 candidatos
+- **supabase_seed_materias.sql** - Notas por matéria (10 matérias x 1780 candidatos), extraídas da planilha de classificação final
 
 ## Setup
 
@@ -30,9 +33,10 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 1. No Supabase, ir para SQL Editor
 2. Copiar e colar o conteúdo de `supabase_schema.sql` e executar
 3. Copiar e colar o conteúdo de `supabase_seed.sql` e executar para popular os dados
+4. Copiar e colar o conteúdo de `supabase_seed_materias.sql` e executar (depende do passo anterior já ter rodado)
 
 ### 3. Configurar credenciais no HTML
-1. Abrir `cadastro-reserva-cspm.html` em um editor de texto
+1. Abrir `index.html` em um editor de texto
 2. Encontrar as linhas com:
    - `PREENCHER_SUPABASE_URL_AQUI`
    - `PREENCHER_SUPABASE_ANON_KEY_AQUI`
@@ -55,6 +59,7 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 ### Painel admin (com login)
 - Edição de dados inline (clicar nas células)
 - Movimentação de candidatos entre posições (botões ▲▼)
+- Clicar na nota abre um modal com a nota final e o detalhamento por matéria, com campos editáveis
 - Alterações são salvas no banco de dados em tempo real
 
 ## Segurança
