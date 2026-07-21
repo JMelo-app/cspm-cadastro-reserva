@@ -319,7 +319,7 @@
         .btn-cancelar-atualizar { background: #eee; color: #444; }
 
         /* View de cadastros (admin) */
-        #viewCadastros .container { max-width: 1100px; }
+        #viewCadastrosContato .container, #viewCadastrosRelatos .container { max-width: 1100px; }
         .cadastros-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
         .link-voltar-lista { color: #366092; cursor: pointer; font-size: 0.9em; text-decoration: underline; }
         .btn-exportar-csv {
@@ -488,8 +488,8 @@
                 <div class="admin-dica">Edite nome, matrícula, modalidade, nota e acertos diretamente na tabela (clique na célula). Use as setas ▲▼ para mover o candidato na classificação — a numeração é fixa (1, 2, 3...), apenas o candidato muda de posição. As alterações são salvas direto no banco de dados, em tempo real.</div>
                 <div class="admin-actions">
                     <button class="btn-admin btn-add" onclick="toggleAddForm()">+ Adicionar candidato</button>
-                    <button class="btn-admin btn-add" onclick="mostrarCadastros('contato')">Cadastros de contato</button>
-                    <button class="btn-admin btn-add" onclick="mostrarCadastros('relatos')">Solicitações de alteração</button>
+                    <button class="btn-admin btn-add" onclick="mostrarCadastrosContato()">Cadastros de contato</button>
+                    <button class="btn-admin btn-add" onclick="mostrarCadastrosRelatos()">Solicitações de alteração</button>
                     <button class="btn-admin btn-sair" onclick="fazerLogout()">Sair (logout)</button>
                 </div>
                 <div class="add-form" id="addForm">
@@ -546,14 +546,14 @@
     </div>
     </div>
 
-    <div id="viewCadastros" style="display:none;">
+    <div id="viewCadastrosContato" style="display:none;">
         <div class="container">
             <div class="content">
                 <div class="cadastros-topo">
                     <span class="link-voltar-lista" onclick="mostrarAprovados()">&larr; Voltar para a lista</span>
                 </div>
 
-                <h3 id="secaoCadastrosContato" style="color:#2a4a7c;margin-bottom:10px;">Cadastros de contato (telefone/cidade)</h3>
+                <h3 style="color:#2a4a7c;margin-bottom:10px;">Cadastros de contato (telefone/cidade)</h3>
                 <div class="cadastros-topo">
                     <span></span>
                     <button class="btn-exportar-csv" onclick="exportarCadastrosCSV()">Exportar CSV</button>
@@ -573,8 +573,18 @@
                         <tr><td colspan="6" class="status-carregando">Carregando dados...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
 
-                <h3 id="secaoSolicitacoesAlteracao" style="color:#2a4a7c;margin:26px 0 10px;">Solicitações de alteração na lista</h3>
+    <div id="viewCadastrosRelatos" style="display:none;">
+        <div class="container">
+            <div class="content">
+                <div class="cadastros-topo">
+                    <span class="link-voltar-lista" onclick="mostrarAprovados()">&larr; Voltar para a lista</span>
+                </div>
+
+                <h3 style="color:#2a4a7c;margin-bottom:10px;">Solicitações de alteração na lista</h3>
                 <div class="cadastros-topo">
                     <span></span>
                     <button class="btn-exportar-csv" onclick="exportarRelatosCSV()">Exportar CSV</button>
@@ -634,34 +644,41 @@
         let adminMode = false;
         let sessaoAtual = null;
 
-        function mostrarInicio() {
-            document.getElementById('viewInicio').style.display = '';
+        function ocultarTodasAsViews() {
+            document.getElementById('viewInicio').style.display = 'none';
             document.getElementById('viewAprovados').style.display = 'none';
-            document.getElementById('viewCadastros').style.display = 'none';
+            document.getElementById('viewCadastrosContato').style.display = 'none';
+            document.getElementById('viewCadastrosRelatos').style.display = 'none';
+        }
+
+        function mostrarInicio() {
+            ocultarTodasAsViews();
+            document.getElementById('viewInicio').style.display = '';
             document.getElementById('btnVoltarInicio').style.display = 'none';
             document.getElementById('btnAdminToggle').style.display = 'none';
             location.hash = '';
         }
 
         function mostrarAprovados() {
-            document.getElementById('viewInicio').style.display = 'none';
+            ocultarTodasAsViews();
             document.getElementById('viewAprovados').style.display = '';
-            document.getElementById('viewCadastros').style.display = 'none';
             document.getElementById('btnVoltarInicio').style.display = '';
             document.getElementById('btnAdminToggle').style.display = '';
             location.hash = 'aprovados';
         }
 
-        function mostrarCadastros(foco) {
-            document.getElementById('viewInicio').style.display = 'none';
-            document.getElementById('viewAprovados').style.display = 'none';
-            document.getElementById('viewCadastros').style.display = '';
+        function mostrarCadastrosContato() {
+            ocultarTodasAsViews();
+            document.getElementById('viewCadastrosContato').style.display = '';
             document.getElementById('btnVoltarInicio').style.display = 'none';
             carregarCadastros();
-            carregarRelatos();
+        }
 
-            const idSecao = foco === 'relatos' ? 'secaoSolicitacoesAlteracao' : 'secaoCadastrosContato';
-            document.getElementById(idSecao).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        function mostrarCadastrosRelatos() {
+            ocultarTodasAsViews();
+            document.getElementById('viewCadastrosRelatos').style.display = '';
+            document.getElementById('btnVoltarInicio').style.display = 'none';
+            carregarRelatos();
         }
 
         function escapeHtml(str) {
