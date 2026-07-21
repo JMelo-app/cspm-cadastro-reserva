@@ -21,6 +21,7 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 
 - **supabase_seed.sql** - Dados iniciais com 1780 candidatos
 - **supabase_seed_materias_01.sql** a **supabase_seed_materias_06.sql** - Notas por matéria (10 matérias x 1780 candidatos), extraídas da planilha de classificação final. Divididos em 6 arquivos menores porque o editor SQL do Supabase tem limite de tamanho de consulta.
+- **supabase_fix_duplicados_materias.sql** - Script de correção pontual: remove notas de matéria duplicadas caso algum dos arquivos de seed acima tenha sido executado mais de uma vez por engano
 
 ## Setup
 
@@ -33,7 +34,9 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 1. No Supabase, ir para SQL Editor
 2. Copiar e colar o conteúdo de `supabase_schema.sql` e executar
 3. Copiar e colar o conteúdo de `supabase_seed.sql` e executar para popular os dados
-4. Copiar e colar o conteúdo de cada um dos arquivos `supabase_seed_materias_01.sql` até `supabase_seed_materias_06.sql`, em ordem, e executar um de cada vez (depende do passo anterior já ter rodado)
+4. Copiar e colar o conteúdo de cada um dos arquivos `supabase_seed_materias_01.sql` até `supabase_seed_materias_06.sql`, em ordem, e executar um de cada vez (depende do passo anterior já ter rodado). **Execute cada arquivo uma única vez** — rodar o mesmo arquivo de novo duplica as notas daquele lote.
+
+Se por engano algum arquivo de matérias foi executado mais de uma vez (notas aparecendo dobradas/triplicadas no modal), rode `supabase_fix_duplicados_materias.sql` para remover as duplicatas e depois rode `supabase_schema.sql` de novo — ele agora adiciona uma trava (`unique constraint`) que impede duplicidade futura.
 
 ### 3. Configurar credenciais no HTML
 1. Abrir `index.html` em um editor de texto

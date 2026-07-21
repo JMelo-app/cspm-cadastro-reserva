@@ -47,6 +47,13 @@ create table if not exists public.notas_materias (
 
 create index if not exists notas_materias_candidato_idx on public.notas_materias (candidato_id);
 
+-- Impede duplicar a mesma materia para o mesmo candidato (ex.: rodar um
+-- arquivo de seed duas vezes por engano) e permite corrigir com ON CONFLICT.
+alter table public.notas_materias
+    drop constraint if exists notas_materias_candidato_materia_key;
+alter table public.notas_materias
+    add constraint notas_materias_candidato_materia_key unique (candidato_id, materia);
+
 alter table public.notas_materias enable row level security;
 
 drop policy if exists "Leitura publica" on public.notas_materias;
