@@ -269,11 +269,17 @@
 
         .btn-ir-aprovados {
             background: linear-gradient(135deg, var(--verde-medio) 0%, var(--verde-escuro) 100%);
-            color: white; border: none; padding: 14px 36px; border-radius: 30px;
-            font-size: 1em; font-weight: 600; cursor: pointer; letter-spacing: 0.5px;
+            color: white; border: 2px solid var(--dourado); border-radius: 30px;
+            width: 100%; padding: 18px 36px;
+            font-size: 1.15em; font-weight: 700; text-transform: uppercase; cursor: pointer;
+            letter-spacing: 1px;
+            box-shadow: 0 8px 22px rgba(31,58,46,0.4), 0 0 0 4px rgba(201,162,39,0.15);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
-        .btn-ir-aprovados:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(31,58,46,0.35); }
+        .btn-ir-aprovados:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(31,58,46,0.45), 0 0 0 6px rgba(201,162,39,0.25);
+        }
 
         .btn-voltar-inicio {
             position: fixed; top: 14px; left: 14px; z-index: 100;
@@ -434,7 +440,7 @@
             </div>
         </div>
 
-        <button class="btn-ir-aprovados" onclick="mostrarAprovados()">Aprovados</button>
+        <button class="btn-ir-aprovados" onclick="mostrarAprovados()">Lista de Aprovados</button>
     </div>
 
     <div class="login-overlay" id="loginOverlay">
