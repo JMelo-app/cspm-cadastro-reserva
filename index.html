@@ -920,15 +920,16 @@
             if (!nome) { alert('Informe ao menos o nome do candidato.'); return; }
 
             const maiorOrdem = todosCandidatos.reduce((max, c) => Math.max(max, c.ordem), 0);
-            const { error } = await supabaseClient.from('candidatos').insert({
+            const { data, error } = await supabaseClient.from('candidatos').insert({
                 ordem: maiorOrdem + 1, nome, matricula, modalidade, nota, acertos
-            });
+            }).select().single();
 
             if (error) { alert('Não foi possível adicionar: ' + error.message); return; }
 
             form.querySelectorAll('input').forEach(i => i.value = '');
             form.classList.remove('visivel');
             await carregarDados();
+            await abrirNotaModal(data.id);
         }
 
         async function excluirCandidato(id) {

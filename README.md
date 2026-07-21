@@ -73,6 +73,7 @@ Se por engano algum arquivo de matérias foi executado mais de uma vez (notas ap
 - Edição de dados inline (clicar nas células)
 - Movimentação de candidatos entre posições (botões ▲▼)
 - Clicar na nota abre um modal com a nota final e o detalhamento por matéria, com campos editáveis
+- Ao adicionar um novo candidato ("+ Adicionar candidato"), o modal de notas por matéria abre automaticamente logo em seguida, para o admin já cadastrar as notas de cada matéria do candidato recém-criado (mesma tela usada para editar as notas dos demais candidatos)
 - Alterações são salvas no banco de dados em tempo real
 - Dois botões, visíveis só quando logado, cada um abrindo uma página própria:
   - "Cadastros de contato": telefone/cidade enviados pelo autocadastro público
