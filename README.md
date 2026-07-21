@@ -5,7 +5,8 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 ## Arquivos
 
 - **index.html** - Interface web com:
-  - Tela inicial (logo + "Cadastro Reserva" / "CSPM - 2025"), com as estatísticas gerais (total, AC, PN) e botão para entrar na lista de aprovados
+  - Visual "premium" com paleta verde/dourado/bordô extraída do brasão da Brigada Militar (era azul/roxo genérico)
+  - Tela inicial com o brasão em destaque (moldura dourada), número de "Aprovados" em destaque, cartões AC/PN lado a lado e um bloco com as datas oficiais do concurso (edital de abertura, homologação, validade e possível renovação), além do botão para entrar na lista de aprovados
   - Busca por nome ou matrícula
   - Filtro por modalidade (AC/PN)
   - Paginação
