@@ -68,3 +68,61 @@ create policy "Escrita somente autenticado"
     for all
     using (auth.role() = 'authenticated')
     with check (auth.role() = 'authenticated');
+
+-- Autocadastro publico de telefone/cidade (o candidato preenche sem login).
+-- Ao contrario das tabelas acima, aqui e o publico que precisa GRAVAR (insert),
+-- mas ninguem sem login pode LER (protege telefone/cidade de todo mundo).
+create table if not exists public.atualizacoes_contato (
+    id bigint generated always as identity primary key,
+    candidato_id bigint not null references public.candidatos(id) on delete cascade,
+    telefone text not null,
+    cidade text not null,
+    created_at timestamptz not null default now()
+);
+
+-- Um cadastro por candidato; tentar inserir de novo gera erro de unicidade
+-- (codigo 23505), que o site usa para mostrar "candidato ja possui cadastro".
+alter table public.atualizacoes_contato
+    drop constraint if exists atualizacoes_contato_candidato_key;
+alter table public.atualizacoes_contato
+    add constraint atualizacoes_contato_candidato_key unique (candidato_id);
+
+alter table public.atualizacoes_contato enable row level security;
+
+drop policy if exists "Insercao publica" on public.atualizacoes_contato;
+create policy "Insercao publica"
+    on public.atualizacoes_contato
+    for insert
+    with check (true);
+
+drop policy if exists "Leitura e gestao somente autenticado" on public.atualizacoes_contato;
+create policy "Leitura e gestao somente autenticado"
+    on public.atualizacoes_contato
+    for all
+    using (auth.role() = 'authenticated')
+    with check (auth.role() = 'authenticated');
+
+-- Relatos publicos de divergencia na lista de classificacao (botao "Lista").
+-- Mesma logica de RLS de atualizacoes_contato: qualquer um pode enviar,
+-- so o admin autenticado pode ler.
+create table if not exists public.solicitacoes_alteracao (
+    id bigint generated always as identity primary key,
+    candidato_id bigint not null references public.candidatos(id) on delete cascade,
+    motivo text not null,
+    created_at timestamptz not null default now()
+);
+
+alter table public.solicitacoes_alteracao enable row level security;
+
+drop policy if exists "Insercao publica" on public.solicitacoes_alteracao;
+create policy "Insercao publica"
+    on public.solicitacoes_alteracao
+    for insert
+    with check (true);
+
+drop policy if exists "Leitura e gestao somente autenticado" on public.solicitacoes_alteracao;
+create policy "Leitura e gestao somente autenticado"
+    on public.solicitacoes_alteracao
+    for all
+    using (auth.role() = 'authenticated')
+    with check (auth.role() = 'authenticated');
