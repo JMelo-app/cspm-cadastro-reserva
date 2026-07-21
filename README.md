@@ -5,6 +5,7 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
 ## Arquivos
 
 - **index.html** - Interface web com:
+  - Tela inicial (logo + "Cadastro Reserva" / "CSPM - 2025") com botão para entrar na lista de aprovados
   - Busca por nome ou matrícula
   - Filtro por modalidade (AC/PN)
   - Paginação
