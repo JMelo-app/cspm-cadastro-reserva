@@ -578,6 +578,8 @@
                     <span></span>
                     <button class="btn-exportar-csv" onclick="exportarRelatosCSV()">Exportar CSV</button>
                 </div>
+
+                <h4 style="color:#444;margin-bottom:8px;">Pendentes</h4>
                 <table>
                     <thead>
                         <tr>
@@ -586,10 +588,28 @@
                             <th>Modalidade</th>
                             <th>Motivo</th>
                             <th>Data</th>
+                            <th>Ação</th>
                         </tr>
                     </thead>
-                    <tbody id="tbodyRelatos">
-                        <tr><td colspan="5" class="status-carregando">Carregando dados...</td></tr>
+                    <tbody id="tbodyRelatosPendentes">
+                        <tr><td colspan="6" class="status-carregando">Carregando dados...</td></tr>
+                    </tbody>
+                </table>
+
+                <h4 style="color:#444;margin:22px 0 8px;">Resolvidas</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Matrícula</th>
+                            <th>Modalidade</th>
+                            <th>Motivo</th>
+                            <th>Data</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyRelatosResolvidas">
+                        <tr><td colspan="6" class="status-carregando">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1217,8 +1237,10 @@
         let relatosAlteracao = [];
 
         async function carregarRelatos() {
-            const tbody = document.getElementById('tbodyRelatos');
-            tbody.innerHTML = '<tr><td colspan="5" class="status-carregando">Carregando dados...</td></tr>';
+            const tbodyPendentes = document.getElementById('tbodyRelatosPendentes');
+            const tbodyResolvidas = document.getElementById('tbodyRelatosResolvidas');
+            tbodyPendentes.innerHTML = '<tr><td colspan="6" class="status-carregando">Carregando dados...</td></tr>';
+            tbodyResolvidas.innerHTML = '';
 
             const { data, error } = await supabaseClient
                 .from('solicitacoes_alteracao')
@@ -1226,37 +1248,58 @@
                 .order('created_at', { ascending: false });
 
             if (error) {
-                tbody.innerHTML = `<tr><td colspan="5" class="status-carregando">Erro ao carregar dados: ${escapeHtml(error.message)}</td></tr>`;
+                tbodyPendentes.innerHTML = `<tr><td colspan="6" class="status-carregando">Erro ao carregar dados: ${escapeHtml(error.message)}</td></tr>`;
                 return;
             }
 
             relatosAlteracao = data || [];
-            if (relatosAlteracao.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="status-carregando">Nenhuma solicitação recebida até o momento.</td></tr>';
-                return;
-            }
+            renderizarTabelasRelatos();
+        }
 
-            tbody.innerHTML = relatosAlteracao.map(r => `
+        function renderizarTabelasRelatos() {
+            const linhaRelato = (r, acaoLabel, novoStatus) => `
                 <tr>
                     <td>${escapeHtml(r.candidatos?.nome || '-')}</td>
                     <td>${escapeHtml(r.candidatos?.matricula || '-')}</td>
                     <td>${escapeHtml(r.candidatos?.modalidade || '-')}</td>
                     <td>${escapeHtml(r.motivo)}</td>
                     <td>${new Date(r.created_at).toLocaleString('pt-BR')}</td>
+                    <td><button class="btn-admin btn-add" onclick="alterarStatusRelato(${r.id}, '${novoStatus}')">${acaoLabel}</button></td>
                 </tr>
-            `).join('');
+            `;
+
+            const pendentes = relatosAlteracao.filter(r => r.status !== 'resolvido');
+            const resolvidas = relatosAlteracao.filter(r => r.status === 'resolvido');
+
+            document.getElementById('tbodyRelatosPendentes').innerHTML = pendentes.length === 0
+                ? '<tr><td colspan="6" class="status-carregando">Nenhuma solicitação pendente.</td></tr>'
+                : pendentes.map(r => linhaRelato(r, 'Marcar como resolvida', 'resolvido')).join('');
+
+            document.getElementById('tbodyRelatosResolvidas').innerHTML = resolvidas.length === 0
+                ? '<tr><td colspan="6" class="status-carregando">Nenhuma solicitação resolvida.</td></tr>'
+                : resolvidas.map(r => linhaRelato(r, 'Reabrir', 'pendente')).join('');
+        }
+
+        async function alterarStatusRelato(id, novoStatus) {
+            const { error } = await supabaseClient.from('solicitacoes_alteracao').update({ status: novoStatus }).eq('id', id);
+            if (error) { alert('Não foi possível atualizar: ' + error.message); return; }
+
+            const r = relatosAlteracao.find(x => x.id === id);
+            if (r) r.status = novoStatus;
+            renderizarTabelasRelatos();
         }
 
         function exportarRelatosCSV() {
             if (relatosAlteracao.length === 0) { alert('Não há solicitações para exportar.'); return; }
             baixarCSV(
                 'solicitacoes_alteracao.csv',
-                ['Nome', 'Matricula', 'Modalidade', 'Motivo', 'Data'],
+                ['Nome', 'Matricula', 'Modalidade', 'Motivo', 'Status', 'Data'],
                 relatosAlteracao.map(r => [
                     r.candidatos?.nome || '',
                     r.candidatos?.matricula || '',
                     r.candidatos?.modalidade || '',
                     r.motivo,
+                    r.status === 'resolvido' ? 'Resolvido' : 'Pendente',
                     new Date(r.created_at).toLocaleString('pt-BR')
                 ])
             );

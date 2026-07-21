@@ -109,8 +109,14 @@ create table if not exists public.solicitacoes_alteracao (
     id bigint generated always as identity primary key,
     candidato_id bigint not null references public.candidatos(id) on delete cascade,
     motivo text not null,
+    status text not null default 'pendente',
     created_at timestamptz not null default now()
 );
+
+alter table public.solicitacoes_alteracao
+    drop constraint if exists solicitacoes_alteracao_status_check;
+alter table public.solicitacoes_alteracao
+    add constraint solicitacoes_alteracao_status_check check (status in ('pendente', 'resolvido'));
 
 alter table public.solicitacoes_alteracao enable row level security;
 
