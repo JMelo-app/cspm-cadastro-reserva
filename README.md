@@ -83,7 +83,7 @@ Se por engano algum arquivo de matérias foi executado mais de uma vez (notas ap
 ### Meus dados (público, sem login)
 - Botão "Meus dados" logo abaixo do título da lista
 - O candidato digita o nome, escolhe o seu na lista sugerida, confirma visualmente (vê nome + matrícula exibidos e clica em "Sim, sou eu") e informa telefone e cidade
-- Se o candidato já tiver enviado esses dados antes, o sistema mostra: "Candidato já possui cadastro, entre em contato com o administrador da página." (checagem feita pelo próprio banco de dados, via trava de unicidade)
+- Se o candidato já tiver enviado esses dados antes, o sistema mostra: "Candidato já cadastrado, entre em contato com o Administrador da página." (checagem feita pelo próprio banco de dados, via trava de unicidade — **exige que `supabase_schema.sql` tenha sido executado** com a `unique constraint` de `atualizacoes_contato`, senão a duplicidade não é bloqueada)
 
 ### Lista (público, sem login)
 - Botão "Lista" logo abaixo do título da lista
