@@ -252,14 +252,13 @@
         }
 
         .logo-moldura {
-            width: 168px; height: 168px; margin: 0 auto 22px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #FAF7F0 55%, #F0EAD8 100%);
-            border: 3px solid var(--dourado);
-            box-shadow: 0 0 0 6px rgba(201,162,39,0.15), 0 10px 24px rgba(0,0,0,0.25);
+            margin: 0 auto 22px;
             display: flex; align-items: center; justify-content: center;
         }
-        .view-inicio .logo { width: 128px; height: auto; display: block; }
+        .view-inicio .logo {
+            width: 150px; height: auto; display: block;
+            filter: drop-shadow(0 10px 18px rgba(0,0,0,0.4));
+        }
 
         .view-inicio h1 {
             color: var(--verde-escuro); font-size: 1.7em; letter-spacing: 1px; margin-bottom: 4px;
@@ -344,6 +343,11 @@
         }
         .atualizar-box h3 { color: var(--verde-escuro); margin-bottom: 14px; }
         .atualizar-box label { font-size: 0.82em; color: #444; display: block; margin: 10px 0 4px; }
+        .atualizar-confirma-candidato {
+            background: #F4F1E6; border-radius: 8px; padding: 14px 16px; margin: 8px 0 4px;
+        }
+        .atualizar-confirma-nome { font-weight: 700; color: var(--verde-escuro); font-size: 1.05em; }
+        .atualizar-confirma-matricula { font-size: 0.85em; color: #666; margin-top: 4px; }
         .atualizar-box input {
             width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 0.9em;
         }
@@ -488,13 +492,14 @@
             </div>
 
             <div id="atualizarEtapaConfirma" style="display:none;">
-                <p>É você? <strong id="atualizarNomeEscolhido"></strong></p>
-                <label for="atualizarMatricula">Confirme sua matrícula (número de inscrição)</label>
-                <input type="text" id="atualizarMatricula" placeholder="Matrícula">
-                <div class="atualizar-erro" id="atualizarErroMatricula"></div>
+                <p>É você?</p>
+                <div class="atualizar-confirma-candidato">
+                    <div class="atualizar-confirma-nome" id="atualizarNomeEscolhido"></div>
+                    <div class="atualizar-confirma-matricula">Matrícula: <span id="atualizarMatriculaEscolhida"></span></div>
+                </div>
                 <div class="atualizar-actions">
-                    <button class="btn-cancelar-atualizar" onclick="voltarEtapaBuscaAutocadastro()">Voltar</button>
-                    <button class="btn-confirmar-atualizar" onclick="confirmarMatriculaAutocadastro()">Confirmar</button>
+                    <button class="btn-cancelar-atualizar" onclick="voltarEtapaBuscaAutocadastro()">Não é você</button>
+                    <button class="btn-confirmar-atualizar" onclick="confirmarCandidatoAutocadastro()">Sim, sou eu</button>
                 </div>
             </div>
 
@@ -1113,8 +1118,6 @@
             atualizarCandidatoSelecionado = null;
             document.getElementById('atualizarBusca').value = '';
             document.getElementById('atualizarResultados').innerHTML = '';
-            document.getElementById('atualizarMatricula').value = '';
-            document.getElementById('atualizarErroMatricula').textContent = '';
             document.getElementById('atualizarTelefone').value = '';
             document.getElementById('atualizarCidade').value = '';
             document.getElementById('atualizarErroEnvio').textContent = '';
@@ -1154,8 +1157,7 @@
             if (!c) return;
             atualizarCandidatoSelecionado = c;
             document.getElementById('atualizarNomeEscolhido').textContent = c.nome;
-            document.getElementById('atualizarMatricula').value = '';
-            document.getElementById('atualizarErroMatricula').textContent = '';
+            document.getElementById('atualizarMatriculaEscolhida').textContent = c.matricula || '-';
             mostrarEtapaAutocadastro('confirma');
         }
 
@@ -1164,12 +1166,8 @@
             mostrarEtapaAutocadastro('busca');
         }
 
-        function confirmarMatriculaAutocadastro() {
-            const digitada = document.getElementById('atualizarMatricula').value.trim();
-            if (!atualizarCandidatoSelecionado || digitada !== atualizarCandidatoSelecionado.matricula) {
-                document.getElementById('atualizarErroMatricula').textContent = 'Matrícula não confere.';
-                return;
-            }
+        function confirmarCandidatoAutocadastro() {
+            if (!atualizarCandidatoSelecionado) return;
             document.getElementById('atualizarErroEnvio').textContent = '';
             mostrarEtapaAutocadastro('dados');
         }

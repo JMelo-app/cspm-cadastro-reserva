@@ -14,7 +14,7 @@ Sistema web para gerenciar candidatos aprovados na prova objetiva do concurso pa
   - Movimentação de candidatos entre posições
   - Nota clicável, abre modal com o detalhamento por matéria (editável pelo admin)
   - 3 botões de destaque logo abaixo do título da lista (com dica ao passar o mouse):
-    - **Meus dados**: o candidato busca o próprio nome, confirma a matrícula e informa telefone/cidade
+    - **Meus dados**: o candidato busca o próprio nome, confirma visualmente (nome + matrícula exibidos) que é ele e informa telefone/cidade
     - **Lista**: o candidato aponta uma divergência na classificação de algum candidato, com campo de motivo
     - **Administrador**: login/logout do administrador
   - Aba "Ver cadastros atualizados" (só admin): lista os telefones/cidades e as solicitações de alteração recebidas, cada uma com botão de exportar em CSV
@@ -82,7 +82,7 @@ Se por engano algum arquivo de matérias foi executado mais de uma vez (notas ap
 
 ### Meus dados (público, sem login)
 - Botão "Meus dados" logo abaixo do título da lista
-- O candidato digita o nome, escolhe o seu na lista sugerida, confirma a matrícula (número de inscrição) e informa telefone e cidade
+- O candidato digita o nome, escolhe o seu na lista sugerida, confirma visualmente (vê nome + matrícula exibidos e clica em "Sim, sou eu") e informa telefone e cidade
 - Se o candidato já tiver enviado esses dados antes, o sistema mostra: "Candidato já possui cadastro, entre em contato com o administrador da página." (checagem feita pelo próprio banco de dados, via trava de unicidade)
 
 ### Lista (público, sem login)
