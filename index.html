@@ -488,7 +488,8 @@
                 <div class="admin-dica">Edite nome, matrícula, modalidade, nota e acertos diretamente na tabela (clique na célula). Use as setas ▲▼ para mover o candidato na classificação — a numeração é fixa (1, 2, 3...), apenas o candidato muda de posição. As alterações são salvas direto no banco de dados, em tempo real.</div>
                 <div class="admin-actions">
                     <button class="btn-admin btn-add" onclick="toggleAddForm()">+ Adicionar candidato</button>
-                    <button class="btn-admin btn-add" onclick="mostrarCadastros()">Ver cadastros atualizados</button>
+                    <button class="btn-admin btn-add" onclick="mostrarCadastros('contato')">Cadastros de contato</button>
+                    <button class="btn-admin btn-add" onclick="mostrarCadastros('relatos')">Solicitações de alteração</button>
                     <button class="btn-admin btn-sair" onclick="fazerLogout()">Sair (logout)</button>
                 </div>
                 <div class="add-form" id="addForm">
@@ -552,7 +553,7 @@
                     <span class="link-voltar-lista" onclick="mostrarAprovados()">&larr; Voltar para a lista</span>
                 </div>
 
-                <h3 style="color:#2a4a7c;margin-bottom:10px;">Cadastros de contato (telefone/cidade)</h3>
+                <h3 id="secaoCadastrosContato" style="color:#2a4a7c;margin-bottom:10px;">Cadastros de contato (telefone/cidade)</h3>
                 <div class="cadastros-topo">
                     <span></span>
                     <button class="btn-exportar-csv" onclick="exportarCadastrosCSV()">Exportar CSV</button>
@@ -573,7 +574,7 @@
                     </tbody>
                 </table>
 
-                <h3 style="color:#2a4a7c;margin:26px 0 10px;">Solicitações de alteração na lista</h3>
+                <h3 id="secaoSolicitacoesAlteracao" style="color:#2a4a7c;margin:26px 0 10px;">Solicitações de alteração na lista</h3>
                 <div class="cadastros-topo">
                     <span></span>
                     <button class="btn-exportar-csv" onclick="exportarRelatosCSV()">Exportar CSV</button>
@@ -651,13 +652,16 @@
             location.hash = 'aprovados';
         }
 
-        function mostrarCadastros() {
+        function mostrarCadastros(foco) {
             document.getElementById('viewInicio').style.display = 'none';
             document.getElementById('viewAprovados').style.display = 'none';
             document.getElementById('viewCadastros').style.display = '';
             document.getElementById('btnVoltarInicio').style.display = 'none';
             carregarCadastros();
             carregarRelatos();
+
+            const idSecao = foco === 'relatos' ? 'secaoSolicitacoesAlteracao' : 'secaoCadastrosContato';
+            document.getElementById(idSecao).scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function escapeHtml(str) {

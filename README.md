@@ -73,7 +73,10 @@ Se por engano algum arquivo de matérias foi executado mais de uma vez (notas ap
 - Movimentação de candidatos entre posições (botões ▲▼)
 - Clicar na nota abre um modal com a nota final e o detalhamento por matéria, com campos editáveis
 - Alterações são salvas no banco de dados em tempo real
-- "Ver cadastros atualizados": lista os candidatos que enviaram telefone/cidade pelo autocadastro público e as solicitações de alteração na lista (separadas em Pendentes/Resolvidas, com botão para marcar como resolvida ou reabrir), cada uma com botão próprio para exportar em CSV
+- Dois botões, visíveis só quando logado: "Cadastros de contato" e "Solicitações de alteração" — levam para a mesma tela (com as duas listas), cada um focando direto na sua seção
+  - Cadastros de contato: telefone/cidade enviados pelo autocadastro público
+  - Solicitações de alteração: divergências reportadas na lista, separadas em Pendentes/Resolvidas, com botão para marcar como resolvida ou reabrir
+  - Cada lista tem seu próprio botão de exportar em CSV
 - **Ambas as listas (telefone/cidade e solicitações de alteração) só ficam visíveis para o administrador logado** — o público nunca consegue ler esses dados, nem pelo F12
 
 ### Meus dados (público, sem login)
