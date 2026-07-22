@@ -68,6 +68,7 @@ Se por engano algum arquivo de matérias foi executado mais de uma vez (notas ap
 - Busca por nome parcial ou matrícula exata
 - Filtro por modalidade (AC - Ampla Concorrência / PN - Pessoas Negras)
 - Paginação configurável
+- Duas colunas de classificação: **AC** (posição geral do candidato na lista) e **PN** (posição do candidato somente entre os candidatos PN, preenchida apenas para quem é PN) — calculadas no navegador a partir da mesma lista, sem alterar filtros/busca/paginação
 
 ### Painel admin (com login)
 - Edição de dados inline (clicar nas células)

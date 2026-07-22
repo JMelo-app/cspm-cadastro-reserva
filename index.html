@@ -197,12 +197,17 @@
         }
         th.th-acoes { display: none; width: 130px; }
         tbody td { padding: 11px 14px; border-bottom: 1px solid #eee; font-size: 0.92em; }
-        td.nota { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--verde-medio); }
+        th.th-centro { text-align: center; }
+        td.nota { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--verde-medio); text-align: center; }
         .nota-link {
             cursor: pointer; text-decoration: underline dashed; text-underline-offset: 3px;
         }
         .nota-link:hover { color: var(--dourado); }
-        td.classif { font-weight: 700; color: var(--dourado); width: 60px; }
+        td.classif-ac { font-weight: 700; color: var(--dourado); width: 48px; text-align: center; }
+        td.classif-pn { font-weight: 700; color: #a13d2b; width: 48px; text-align: center; }
+        th.th-classif-ac, th.th-classif-pn { width: 48px; }
+        th.th-classif-pn { color: #a13d2b; }
+        th.th-mod { width: 70px; }
         .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 700; }
         .badge-ac { background: #E3ECE4; color: var(--verde-escuro); }
         .badge-pn { background: #fdeeea; color: #a13d2b; }
@@ -626,17 +631,18 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Classificação</th>
+                        <th class="th-centro th-classif-ac">AC</th>
+                        <th class="th-centro th-classif-pn">PN</th>
                         <th>Nome</th>
                         <th>Matrícula</th>
-                        <th>Modalidade</th>
-                        <th>Nota</th>
-                        <th>Acertos</th>
+                        <th class="th-centro th-mod">MOD</th>
+                        <th class="th-centro">Nota</th>
+                        <th class="th-centro">Acertos</th>
                         <th class="th-acoes" id="thAcoes">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyCandidatos">
-                    <tr><td colspan="6" class="status-carregando">Carregando dados...</td></tr>
+                    <tr><td colspan="7" class="status-carregando">Carregando dados...</td></tr>
                 </tbody>
             </table>
 
@@ -822,7 +828,7 @@
 
                 if (error) {
                     document.getElementById('tbodyCandidatos').innerHTML =
-                        `<tr><td colspan="6" class="status-carregando">Erro ao carregar dados: ${escapeHtml(error.message)}</td></tr>`;
+                        `<tr><td colspan="7" class="status-carregando">Erro ao carregar dados: ${escapeHtml(error.message)}</td></tr>`;
                     return;
                 }
 
@@ -1464,18 +1470,23 @@
             const inicio = (paginaAtual - 1) * itensPorPagina;
             const fim = inicio + itensPorPagina;
             const pagina = candidatosFiltrados.slice(inicio, fim);
+            const pnRankMap = new Map(
+                todosCandidatos.filter(x => x.modalidade === 'PN').map((x, i) => [x.id, i + 1])
+            );
 
             if (pagina.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${adminMode ? 7 : 6}" class="empty-message">Nenhum candidato encontrado</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${adminMode ? 8 : 7}" class="empty-message">Nenhum candidato encontrado</td></tr>`;
             } else {
                 pagina.forEach(c => {
                     const posicao = todosCandidatos.indexOf(c) + 1;
+                    const pnPos = c.modalidade === 'PN' ? pnRankMap.get(c.id) : '';
                     const row = document.createElement('tr');
                     const badgeClass = c.modalidade === 'PN' ? 'badge-pn' : 'badge-ac';
 
                     if (!adminMode) {
                         row.innerHTML = `
-                            <td class="classif">${posicao}</td>
+                            <td class="classif-ac">${posicao}</td>
+                            <td class="classif-pn">${pnPos}</td>
                             <td><strong>${escapeHtml(c.nome)}</strong></td>
                             <td>${escapeHtml(c.matricula)}</td>
                             <td><span class="badge ${badgeClass}">${c.modalidade}</span></td>
@@ -1485,7 +1496,8 @@
                     } else {
                         row.classList.add('row-admin');
                         row.innerHTML = `
-                            <td class="classif">${posicao}</td>
+                            <td class="classif-ac">${posicao}</td>
+                            <td class="classif-pn">${pnPos}</td>
                             <td contenteditable="true" data-field="nome">${escapeHtml(c.nome)}</td>
                             <td contenteditable="true" data-field="matricula">${escapeHtml(c.matricula)}</td>
                             <td></td>
@@ -1497,7 +1509,7 @@
                                 <button title="Excluir" class="excluir" onclick="excluirCandidato(${c.id})">🗑</button>
                             </td>
                         `;
-                        const selectTd = row.children[3];
+                        const selectTd = row.children[4];
                         const select = document.createElement('select');
                         select.innerHTML = `<option value="AC" ${c.modalidade === 'AC' ? 'selected' : ''}>AC</option><option value="PN" ${c.modalidade === 'PN' ? 'selected' : ''}>PN</option>`;
                         select.addEventListener('change', e => commitEdicao(c.id, 'modalidade', e.target.value));
