@@ -1354,8 +1354,8 @@
 
         function baixarCSV(nomeArquivo, cabecalho, linhasValores) {
             const escCsv = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-            const linhas = [cabecalho.map(escCsv).join(',')];
-            linhasValores.forEach(valores => linhas.push(valores.map(escCsv).join(',')));
+            const linhas = [cabecalho.map(escCsv).join(';')];
+            linhasValores.forEach(valores => linhas.push(valores.map(escCsv).join(';')));
 
             const csv = '﻿' + linhas.join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
