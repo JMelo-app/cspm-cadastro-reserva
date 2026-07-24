@@ -448,7 +448,23 @@
         .mapa-ranking td { padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 0.88em; }
         .mapa-ranking td.qtd { text-align: right; font-weight: 600; color: var(--verde-medio); font-variant-numeric: tabular-nums; }
         .mapa-nao-identificadas { font-size: 0.78em; color: #a13d2b; margin-top: 6px; }
-        .leaflet-tooltip.mapa-tooltip { font-size: 0.85em; }
+        .leaflet-tooltip.mapa-tooltip {
+            font-size: 0.88em; font-weight: 600; color: var(--verde-escuro);
+            padding: 6px 10px; border-radius: 5px; border: 1px solid var(--verde-medio);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+        }
+        .mapa-live {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.78em; color: var(--verde-medio); font-weight: 600; margin-bottom: 12px;
+        }
+        .mapa-live .ponto-vivo {
+            width: 8px; height: 8px; border-radius: 50%; background: #2ecc71;
+            animation: mapa-pulso 1.6s ease-in-out infinite;
+        }
+        @keyframes mapa-pulso {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.55); }
+            50% { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); }
+        }
     </style>
 </head>
 <body>
@@ -815,10 +831,11 @@
                 </div>
 
                 <h3 style="color:var(--verde-escuro);margin-bottom:10px;">Mapa de distribuição por cidade (RS)</h3>
-                <p style="font-size:0.82em;color:#777;margin-bottom:16px;">
+                <p style="font-size:0.82em;color:#777;margin-bottom:10px;">
                     Baseado nas cidades informadas pelos próprios candidatos no autocadastro de contato.
                     Mostra apenas quantidades por município — nenhum nome de candidato é exibido aqui.
                 </p>
+                <div class="mapa-live"><span class="ponto-vivo"></span>Atualiza automaticamente conforme novos cadastros chegam</div>
 
                 <div class="mapa-stats">
                     <div class="mapa-stat-card"><div class="valor" id="mapaStatTotal">-</div><div class="rotulo">Cadastros com cidade</div></div>
@@ -878,6 +895,7 @@
             document.getElementById('viewCadastrosContato').style.display = 'none';
             document.getElementById('viewCadastrosRelatos').style.display = 'none';
             document.getElementById('viewMapaCidades').style.display = 'none';
+            pararRealtimeMapa(); // desliga a assinatura em tempo real ao sair do mapa
         }
 
         function mostrarInicio() {
@@ -1021,6 +1039,7 @@
         }
 
         async function fazerLogout() {
+            pararRealtimeMapa();
             await supabaseClient.auth.signOut();
             sessaoAtual = null;
             adminMode = false;
@@ -1709,10 +1728,15 @@
             }
         }
 
+        // So mostra tooltip (nome + numero) nas cidades que tem pelo menos um
+        // candidato — passar o mouse nas demais so da o realce do contorno,
+        // sem poluir o mapa com "0 candidatos" nas quase 500 cidades vazias.
         function bindTooltipMunicipio(contagemPorId) {
             return (f, layer) => {
                 const qtd = contagemPorId[f.properties.id] || 0;
-                layer.bindTooltip(`${f.properties.name}: ${qtd} candidato${qtd === 1 ? '' : 's'}`, { sticky: true, className: 'mapa-tooltip' });
+                if (qtd > 0) {
+                    layer.bindTooltip(`${f.properties.name}: ${qtd} candidato${qtd === 1 ? '' : 's'}`, { sticky: true, className: 'mapa-tooltip' });
+                }
             };
         }
 
@@ -1774,17 +1798,11 @@
             renderizarCamadaMapa();
         }
 
-        async function mostrarMapaCidades() {
-            ocultarTodasAsViews();
-            document.getElementById('viewMapaCidades').style.display = '';
-            document.getElementById('btnVoltarInicio').style.display = 'none';
-
-            document.getElementById('mapaRankingBody').innerHTML = '<tr><td colspan="2" class="status-carregando">Carregando dados...</td></tr>';
-            document.getElementById('mapaStatTotal').textContent = '-';
-            document.getElementById('mapaStatMunicipios').textContent = '-';
-            document.getElementById('mapaStatTop').textContent = '-';
-            document.getElementById('mapaNaoIdentificadas').textContent = '';
-
+        // Carrega o geojson + os cadastros de contato, recalcula as contagens e
+        // redesenha o mapa/estatisticas/ranking. Usada tanto na primeira abertura
+        // da tela quanto a cada evento em tempo real vindo do Supabase, para que
+        // o mapa va se atualizando sozinho conforme os candidatos se autocadastram.
+        async function carregarEProcessarDadosMapa() {
             let geojson, data, error;
             try {
                 [geojson, { data, error }] = await Promise.all([
@@ -1854,6 +1872,45 @@
             mapaUltimaContagem = contagemPorId;
             mapaUltimoMax = max;
             renderizarCamadaMapa();
+        }
+
+        // Assinatura em tempo real (Supabase Realtime) na tabela de autocadastro:
+        // qualquer insercao/alteracao/exclusao dispara um recalculo do mapa, sem
+        // precisar o admin recarregar a pagina. Exige que a tabela
+        // atualizacoes_contato esteja habilitada para Realtime no Supabase
+        // (ver bloco no final de supabase_schema.sql).
+        let mapaCanalRealtime = null;
+
+        function pararRealtimeMapa() {
+            if (mapaCanalRealtime) {
+                supabaseClient.removeChannel(mapaCanalRealtime);
+                mapaCanalRealtime = null;
+            }
+        }
+
+        function iniciarRealtimeMapa() {
+            pararRealtimeMapa();
+            mapaCanalRealtime = supabaseClient
+                .channel('mapa-cidades-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'atualizacoes_contato' }, () => {
+                    carregarEProcessarDadosMapa();
+                })
+                .subscribe();
+        }
+
+        async function mostrarMapaCidades() {
+            ocultarTodasAsViews();
+            document.getElementById('viewMapaCidades').style.display = '';
+            document.getElementById('btnVoltarInicio').style.display = 'none';
+
+            document.getElementById('mapaRankingBody').innerHTML = '<tr><td colspan="2" class="status-carregando">Carregando dados...</td></tr>';
+            document.getElementById('mapaStatTotal').textContent = '-';
+            document.getElementById('mapaStatMunicipios').textContent = '-';
+            document.getElementById('mapaStatTop').textContent = '-';
+            document.getElementById('mapaNaoIdentificadas').textContent = '';
+
+            await carregarEProcessarDadosMapa();
+            iniciarRealtimeMapa();
         }
 
         let relatosAlteracao = [];

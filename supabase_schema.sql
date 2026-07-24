@@ -137,3 +137,20 @@ create policy "Leitura e gestao somente autenticado"
     for all
     using (auth.role() = 'authenticated')
     with check (auth.role() = 'authenticated');
+
+-- Habilita Realtime (atualizacoes ao vivo) na tabela de autocadastro de
+-- contato. E o que faz o "Mapa por cidade" (painel admin) atualizar as
+-- contagens sozinho conforme os candidatos vao se autocadastrando, sem
+-- precisar recarregar a pagina. Bloco idempotente: pode rodar de novo sem
+-- erro mesmo se a tabela ja estiver na publicacao.
+do $$
+begin
+    if not exists (
+        select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'atualizacoes_contato'
+    ) then
+        alter publication supabase_realtime add table public.atualizacoes_contato;
+    end if;
+end $$;
