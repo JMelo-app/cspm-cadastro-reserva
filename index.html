@@ -1663,11 +1663,12 @@
             return melhorId;
         }
 
-        // Cor do territorio conforme a contagem. O 0 usa um branco levemente
-        // diferente do fundo do mapa, com contorno visivel, para o contorno dos
-        // municipios sem cadastro continuar aparecendo (nao "sumir" no fundo).
+        // Cor do territorio conforme a contagem. Todo o "chao" do mapa (municipios
+        // sem cadastro) usa exatamente a mesma cor de fundo do container
+        // (#dbe4dc), formando uma area unica e uniforme. Os destaques (municipios
+        // com cadastro) sao pintados por cima, num degrade dourado -> verde-negro.
         function corParContagem(count, max) {
-            if (!count) return '#fbfbf8';
+            if (!count) return '#dbe4dc';
             const t = max > 0 ? Math.sqrt(count / max) : 0;
             const c1 = [244, 223, 150]; // dourado claro
             const c2 = [31, 58, 46];    // verde-negro
@@ -1741,7 +1742,7 @@
                 }).addTo(leafletMapCidades);
             } else {
                 leafletCamadaTerritorio = L.geoJSON(geojson, {
-                    style: () => ({ fillColor: '#eef2ee', weight: 0.6, color: '#c3d0c6', fillOpacity: 0.6 })
+                    style: () => ({ fillColor: '#dbe4dc', weight: 0.6, color: '#c3d0c6', fillOpacity: 1 })
                 }).addTo(leafletMapCidades);
 
                 leafletCamadaPontos = L.layerGroup();
