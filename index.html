@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro Reserva - Aprovados Fase Objetiva - CSPM 2025</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <script src="vendor/leaflet/leaflet.js"></script>
     <style>
         :root {
             --verde-medio: #2F5233;
@@ -363,6 +365,17 @@
             width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 0.9em;
         }
         .atualizar-box input:focus { outline: none; border-color: var(--verde-medio); }
+        .atualizar-box select {
+            width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 0.9em;
+            background: white; cursor: pointer;
+        }
+        .atualizar-box select:focus { outline: none; border-color: var(--verde-medio); }
+        .atualizar-box select:disabled { background: #f2f2f2; color: #999; cursor: not-allowed; }
+        .atualizar-checkbox-fora-rs {
+            display: flex; align-items: center; gap: 8px; margin: 12px 0 4px !important;
+            font-size: 0.85em; color: #444; cursor: pointer;
+        }
+        .atualizar-checkbox-fora-rs input[type="checkbox"] { width: auto; cursor: pointer; }
         .atualizar-box textarea {
             width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 0.9em;
             font-family: inherit; resize: vertical; min-height: 90px;
@@ -410,6 +423,32 @@
             border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer;
         }
         .btn-exportar-csv:hover { background: var(--verde-medio); }
+
+        /* View do mapa de cidades (admin) */
+        #viewMapaCidades .container { max-width: 1200px; }
+        .mapa-stats { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .mapa-stat-card {
+            background: #F4F1E6; border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 130px;
+        }
+        .mapa-stat-card .valor { font-size: 1.5em; font-weight: 700; color: var(--verde-medio); }
+        .mapa-stat-card .rotulo { font-size: 0.75em; color: #777; text-transform: uppercase; letter-spacing: 0.4px; }
+        #mapaCidadesLeaflet {
+            width: 100%; height: 560px; border-radius: 8px; border: 1px solid #ddd;
+            background: #dbe4dc;
+        }
+        .mapa-legenda {
+            display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 0.82em; color: #555; flex-wrap: wrap;
+        }
+        .mapa-legenda .escala { display: flex; align-items: center; gap: 4px; }
+        .mapa-legenda .quadrado { width: 16px; height: 16px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15); }
+        .mapa-ranking { margin-top: 18px; }
+        .mapa-ranking h4 { color: #444; margin-bottom: 8px; font-size: 0.95em; }
+        .mapa-ranking table { width: 100%; border-collapse: collapse; }
+        .mapa-ranking th { text-align: left; font-size: 0.78em; text-transform: uppercase; color: #777; padding: 6px 10px; border-bottom: 2px solid #e0e0e0; }
+        .mapa-ranking td { padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 0.88em; }
+        .mapa-ranking td.qtd { text-align: right; font-weight: 600; color: var(--verde-medio); font-variant-numeric: tabular-nums; }
+        .mapa-nao-identificadas { font-size: 0.78em; color: #a13d2b; margin-top: 6px; }
+        .leaflet-tooltip.mapa-tooltip { font-size: 0.85em; }
     </style>
 </head>
 <body>
@@ -535,8 +574,15 @@
             <div id="atualizarEtapaDados" style="display:none;">
                 <label for="atualizarTelefone">Telefone</label>
                 <input type="text" id="atualizarTelefone" placeholder="(51) 99999-9999">
-                <label for="atualizarCidade">Cidade</label>
-                <input type="text" id="atualizarCidade" placeholder="Sua cidade">
+                <label for="atualizarCidadeSelect">Cidade</label>
+                <select id="atualizarCidadeSelect">
+                    <option value="">Selecione sua cidade</option>
+                </select>
+                <label class="atualizar-checkbox-fora-rs" for="atualizarForaRS">
+                    <input type="checkbox" id="atualizarForaRS" onchange="alternarCidadeForaRS()">
+                    Sou de fora do Rio Grande do Sul
+                </label>
+                <input type="text" id="atualizarCidadeForaRS" placeholder="Digite o nome da sua cidade" style="display:none;">
                 <div class="atualizar-erro" id="atualizarErroEnvio"></div>
                 <div class="atualizar-actions">
                     <button class="btn-cancelar-atualizar" onclick="fecharAtualizarModal()">Cancelar</button>
@@ -622,6 +668,7 @@
                     <button class="btn-admin btn-add" onclick="toggleAddForm()">+ Adicionar candidato</button>
                     <button class="btn-admin btn-add" onclick="mostrarCadastrosContato()">Cadastros de contato</button>
                     <button class="btn-admin btn-add" onclick="mostrarCadastrosRelatos()">Solicitações de alteração</button>
+                    <button class="btn-admin btn-add" onclick="mostrarMapaCidades()">Mapa por cidade</button>
                     <button class="btn-admin btn-sair" onclick="fazerLogout()">Sair (logout)</button>
                 </div>
                 <div class="add-form" id="addForm">
@@ -760,6 +807,50 @@
         </div>
     </div>
 
+    <div id="viewMapaCidades" style="display:none;">
+        <div class="container">
+            <div class="content">
+                <div class="cadastros-topo">
+                    <span class="link-voltar-lista" onclick="mostrarAprovados()">&larr; Voltar para a lista</span>
+                </div>
+
+                <h3 style="color:var(--verde-escuro);margin-bottom:10px;">Mapa de distribuição por cidade (RS)</h3>
+                <p style="font-size:0.82em;color:#777;margin-bottom:16px;">
+                    Baseado nas cidades informadas pelos próprios candidatos no autocadastro de contato.
+                    Mostra apenas quantidades por município — nenhum nome de candidato é exibido aqui.
+                </p>
+
+                <div class="mapa-stats">
+                    <div class="mapa-stat-card"><div class="valor" id="mapaStatTotal">-</div><div class="rotulo">Cadastros com cidade</div></div>
+                    <div class="mapa-stat-card"><div class="valor" id="mapaStatMunicipios">-</div><div class="rotulo">Municípios com candidatos</div></div>
+                    <div class="mapa-stat-card"><div class="valor" id="mapaStatTop">-</div><div class="rotulo">Cidade com mais candidatos</div></div>
+                </div>
+
+                <div class="filters" style="margin-bottom:10px;">
+                    <button class="filter-btn active" id="btnModoTerritorio" onclick="mudarModoMapa('territorio')">Por cidade (território)</button>
+                    <button class="filter-btn" id="btnModoPontos" onclick="mudarModoMapa('pontos')">Por pontos (proporcional)</button>
+                </div>
+
+                <div id="mapaCidadesLeaflet"></div>
+
+                <div class="mapa-legenda">
+                    <span>Menos candidatos</span>
+                    <div class="escala" id="mapaEscala"></div>
+                    <span>Mais candidatos</span>
+                </div>
+                <div class="mapa-nao-identificadas" id="mapaNaoIdentificadas"></div>
+
+                <div class="mapa-ranking">
+                    <h4>Ranking de cidades</h4>
+                    <table>
+                        <thead><tr><th>Cidade</th><th style="text-align:right;">Candidatos</th></tr></thead>
+                        <tbody id="mapaRankingBody"><tr><td colspan="2" class="status-carregando">Carregando dados...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===================== CONFIGURAÇÃO DO SUPABASE =====================
         // Preencha com os dados do seu projeto (Supabase > Project Settings > API)
@@ -768,6 +859,10 @@
         // ======================================================================
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Lista oficial dos municipios do RS (497), usada no seletor de cidade do
+        // autocadastro publico, para evitar nomes inconsistentes/digitados errado.
+        const MUNICIPIOS_RS = ["Aceguá","Água Santa","Agudo","Ajuricaba","Alecrim","Alegrete","Alegria","Almirante Tamandaré do Sul","Alpestre","Alto Alegre","Alto Feliz","Alvorada","Amaral Ferrador","Ametista do Sul","André da Rocha","Anta Gorda","Antônio Prado","Arambaré","Araricá","Aratiba","Arroio do Meio","Arroio do Padre","Arroio do Sal","Arroio do Tigre","Arroio dos Ratos","Arroio Grande","Arvorezinha","Augusto Pestana","Áurea","Bagé","Balneário Pinhal","Barão","Barão de Cotegipe","Barão do Triunfo","Barra do Guarita","Barra do Quaraí","Barra do Ribeiro","Barra do Rio Azul","Barra Funda","Barracão","Barros Cassal","Benjamin Constant do Sul","Bento Gonçalves","Boa Vista das Missões","Boa Vista do Buricá","Boa Vista do Cadeado","Boa Vista do Incra","Boa Vista do Sul","Bom Jesus","Bom Princípio","Bom Progresso","Bom Retiro do Sul","Boqueirão do Leão","Bossoroca","Bozano","Braga","Brochier","Butiá","Caçapava do Sul","Cacequi","Cachoeira do Sul","Cachoeirinha","Cacique Doble","Caibaté","Caiçara","Camaquã","Camargo","Cambará do Sul","Campestre da Serra","Campina das Missões","Campinas do Sul","Campo Bom","Campo Novo","Campos Borges","Candelária","Cândido Godói","Candiota","Canela","Canguçu","Canoas","Canudos do Vale","Capão Bonito do Sul","Capão da Canoa","Capão do Cipó","Capão do Leão","Capela de Santana","Capitão","Capivari do Sul","Caraá","Carazinho","Carlos Barbosa","Carlos Gomes","Casca","Caseiros","Catuípe","Caxias do Sul","Centenário","Cerrito","Cerro Branco","Cerro Grande","Cerro Grande do Sul","Cerro Largo","Chapada","Charqueadas","Charrua","Chiapetta","Chuí","Chuvisca","Cidreira","Ciríaco","Colinas","Colorado","Condor","Constantina","Coqueiro Baixo","Coqueiros do Sul","Coronel Barros","Coronel Bicaco","Coronel Pilar","Cotiporã","Coxilha","Crissiumal","Cristal","Cristal do Sul","Cruz Alta","Cruzaltense","Cruzeiro do Sul","David Canabarro","Derrubadas","Dezesseis de Novembro","Dilermando de Aguiar","Dois Irmãos","Dois Irmãos das Missões","Dois Lajeados","Dom Feliciano","Dom Pedrito","Dom Pedro de Alcântara","Dona Francisca","Doutor Maurício Cardoso","Doutor Ricardo","Eldorado do Sul","Encantado","Encruzilhada do Sul","Engenho Velho","Entre Rios do Sul","Entre-Ijuís","Erebango","Erechim","Ernestina","Erval Grande","Erval Seco","Esmeralda","Esperança do Sul","Espumoso","Estação","Estância Velha","Esteio","Estrela","Estrela Velha","Eugênio de Castro","Fagundes Varela","Farroupilha","Faxinal do Soturno","Faxinalzinho","Fazenda Vilanova","Feliz","Flores da Cunha","Floriano Peixoto","Fontoura Xavier","Formigueiro","Forquetinha","Fortaleza dos Valos","Frederico Westphalen","Garibaldi","Garruchos","Gaurama","General Câmara","Gentil","Getúlio Vargas","Giruá","Glorinha","Gramado","Gramado dos Loureiros","Gramado Xavier","Gravataí","Guabiju","Guaíba","Guaporé","Guarani das Missões","Harmonia","Herval","Herveiras","Horizontina","Hulha Negra","Humaitá","Ibarama","Ibiaçá","Ibiraiaras","Ibirapuitã","Ibirubá","Igrejinha","Ijuí","Ilópolis","Imbé","Imigrante","Independência","Inhacorá","Ipê","Ipiranga do Sul","Iraí","Itaara","Itacurubi","Itapuca","Itaqui","Itati","Itatiba do Sul","Ivorá","Ivoti","Jaboticaba","Jacuizinho","Jacutinga","Jaguarão","Jaguari","Jaquirana","Jari","Jóia","Júlio de Castilhos","Lagoa Bonita do Sul","Lagoa dos Três Cantos","Lagoa Vermelha","Lagoão","Lajeado","Lajeado do Bugre","Lavras do Sul","Liberato Salzano","Lindolfo Collor","Linha Nova","Maçambará","Machadinho","Mampituba","Manoel Viana","Maquiné","Maratá","Marau","Marcelino Ramos","Mariana Pimentel","Mariano Moro","Marques de Souza","Mata","Mato Castelhano","Mato Leitão","Mato Queimado","Maximiliano de Almeida","Minas do Leão","Miraguaí","Montauri","Monte Alegre dos Campos","Monte Belo do Sul","Montenegro","Mormaço","Morrinhos do Sul","Morro Redondo","Morro Reuter","Mostardas","Muçum","Muitos Capões","Muliterno","Não-Me-Toque","Nicolau Vergueiro","Nonoai","Nova Alvorada","Nova Araçá","Nova Bassano","Nova Boa Vista","Nova Bréscia","Nova Candelária","Nova Esperança do Sul","Nova Hartz","Nova Pádua","Nova Palma","Nova Petrópolis","Nova Prata","Nova Ramada","Nova Roma do Sul","Nova Santa Rita","Novo Barreiro","Novo Cabrais","Novo Hamburgo","Novo Machado","Novo Tiradentes","Novo Xingu","Osório","Paim Filho","Palmares do Sul","Palmeira das Missões","Palmitinho","Panambi","Pantano Grande","Paraí","Paraíso do Sul","Pareci Novo","Parobé","Passa Sete","Passo do Sobrado","Passo Fundo","Paulo Bento","Paverama","Pedras Altas","Pedro Osório","Pejuçara","Pelotas","Picada Café","Pinhal","Pinhal da Serra","Pinhal Grande","Pinheirinho do Vale","Pinheiro Machado","Pinto Bandeira","Pirapó","Piratini","Planalto","Poço das Antas","Pontão","Ponte Preta","Portão","Porto Alegre","Porto Lucena","Porto Mauá","Porto Vera Cruz","Porto Xavier","Pouso Novo","Presidente Lucena","Progresso","Protásio Alves","Putinga","Quaraí","Quatro Irmãos","Quevedos","Quinze de Novembro","Redentora","Relvado","Restinga Seca","Rio dos Índios","Rio Grande","Rio Pardo","Riozinho","Roca Sales","Rodeio Bonito","Rolador","Rolante","Ronda Alta","Rondinha","Roque Gonzales","Rosário do Sul","Sagrada Família","Saldanha Marinho","Salto do Jacuí","Salvador das Missões","Salvador do Sul","Sananduva","Sant' Ana do Livramento","Santa Bárbara do Sul","Santa Cecília do Sul","Santa Clara do Sul","Santa Cruz do Sul","Santa Margarida do Sul","Santa Maria","Santa Maria do Herval","Santa Rosa","Santa Tereza","Santa Vitória do Palmar","Santana da Boa Vista","Santiago","Santo Ângelo","Santo Antônio da Patrulha","Santo Antônio das Missões","Santo Antônio do Palma","Santo Antônio do Planalto","Santo Augusto","Santo Cristo","Santo Expedito do Sul","São Borja","São Domingos do Sul","São Francisco de Assis","São Francisco de Paula","São Gabriel","São Jerônimo","São João da Urtiga","São João do Polêsine","São Jorge","São José das Missões","São José do Herval","São José do Hortêncio","São José do Inhacorá","São José do Norte","São José do Ouro","São José do Sul","São José dos Ausentes","São Leopoldo","São Lourenço do Sul","São Luiz Gonzaga","São Marcos","São Martinho","São Martinho da Serra","São Miguel das Missões","São Nicolau","São Paulo das Missões","São Pedro da Serra","São Pedro das Missões","São Pedro do Butiá","São Pedro do Sul","São Sebastião do Caí","São Sepé","São Valentim","São Valentim do Sul","São Valério do Sul","São Vendelino","São Vicente do Sul","Sapiranga","Sapucaia do Sul","Sarandi","Seberi","Sede Nova","Segredo","Selbach","Senador Salgado Filho","Sentinela do Sul","Serafina Corrêa","Sério","Sertão","Sertão Santana","Sete de Setembro","Severiano de Almeida","Silveira Martins","Sinimbu","Sobradinho","Soledade","Tabaí","Tapejara","Tapera","Tapes","Taquara","Taquari","Taquaruçu do Sul","Tavares","Tenente Portela","Terra de Areia","Teutônia","Tio Hugo","Tiradentes do Sul","Toropi","Torres","Tramandaí","Travesseiro","Três Arroios","Três Cachoeiras","Três Coroas","Três de Maio","Três Forquilhas","Três Palmeiras","Três Passos","Trindade do Sul","Triunfo","Tucunduva","Tunas","Tupanci do Sul","Tupanciretã","Tupandi","Tuparendi","Turuçu","Ubiretama","União da Serra","Unistalda","Uruguaiana","Vacaria","Vale do Sol","Vale Real","Vale Verde","Vanini","Venâncio Aires","Vera Cruz","Veranópolis","Vespasiano Correa","Viadutos","Viamão","Vicente Dutra","Victor Graeff","Vila Flores","Vila Lângaro","Vila Maria","Vila Nova do Sul","Vista Alegre","Vista Alegre do Prata","Vista Gaúcha","Vitória das Missões","Westfalia","Xangri-lá"];
 
         let todosCandidatos = []; // { id, ordem, nome, matricula, modalidade, nota, acertos }
         let candidatosFiltrados = [];
@@ -782,6 +877,7 @@
             document.getElementById('viewAprovados').style.display = 'none';
             document.getElementById('viewCadastrosContato').style.display = 'none';
             document.getElementById('viewCadastrosRelatos').style.display = 'none';
+            document.getElementById('viewMapaCidades').style.display = 'none';
         }
 
         function mostrarInicio() {
@@ -1154,12 +1250,41 @@
 
         let atualizarCandidatoSelecionado = null;
 
+        function preencherSelectCidadesRS() {
+            const select = document.getElementById('atualizarCidadeSelect');
+            if (select.options.length > 1) return; // ja preenchido
+            MUNICIPIOS_RS.forEach(nome => {
+                const opt = document.createElement('option');
+                opt.value = nome;
+                opt.textContent = nome;
+                select.appendChild(opt);
+            });
+        }
+
+        function alternarCidadeForaRS() {
+            const foraRS = document.getElementById('atualizarForaRS').checked;
+            const select = document.getElementById('atualizarCidadeSelect');
+            const campoForaRS = document.getElementById('atualizarCidadeForaRS');
+            select.style.display = foraRS ? 'none' : '';
+            select.disabled = foraRS;
+            campoForaRS.style.display = foraRS ? '' : 'none';
+            if (foraRS) {
+                select.value = '';
+            } else {
+                campoForaRS.value = '';
+            }
+        }
+
         function abrirAtualizarModal() {
             atualizarCandidatoSelecionado = null;
             document.getElementById('atualizarBusca').value = '';
             document.getElementById('atualizarResultados').innerHTML = '';
             document.getElementById('atualizarTelefone').value = '';
-            document.getElementById('atualizarCidade').value = '';
+            preencherSelectCidadesRS();
+            document.getElementById('atualizarCidadeSelect').value = '';
+            document.getElementById('atualizarCidadeForaRS').value = '';
+            document.getElementById('atualizarForaRS').checked = false;
+            alternarCidadeForaRS();
             document.getElementById('atualizarErroEnvio').textContent = '';
             mostrarEtapaAutocadastro('busca');
             document.getElementById('atualizarOverlay').classList.add('visivel');
@@ -1214,12 +1339,17 @@
 
         async function enviarAtualizacaoContato() {
             const telefone = document.getElementById('atualizarTelefone').value.trim();
-            const cidade = document.getElementById('atualizarCidade').value.trim();
+            const foraRS = document.getElementById('atualizarForaRS').checked;
+            const cidade = foraRS
+                ? document.getElementById('atualizarCidadeForaRS').value.trim()
+                : document.getElementById('atualizarCidadeSelect').value.trim();
             const erroEl = document.getElementById('atualizarErroEnvio');
             erroEl.textContent = '';
 
             if (!telefone || !cidade) {
-                erroEl.textContent = 'Informe telefone e cidade.';
+                erroEl.textContent = foraRS
+                    ? 'Informe telefone e o nome da sua cidade.'
+                    : 'Informe telefone e selecione sua cidade.';
                 return;
             }
             if (!atualizarCandidatoSelecionado) return;
@@ -1381,6 +1511,348 @@
                     new Date(r.created_at).toLocaleString('pt-BR')
                 ])
             );
+        }
+
+        // ---------------- Mapa de cidades (admin) ----------------
+        // Mostra apenas quantitativos por municipio, a partir da cidade informada
+        // pelo proprio candidato no autocadastro de contato. Nunca busca/expoe nome
+        // do candidato aqui (a query pede so a coluna "cidade").
+
+        let leafletMapCidades = null;
+        let leafletCamadaTerritorio = null;
+        let leafletCamadaPontos = null;
+        let geojsonMunicipiosRS = null;
+        let modoMapaCidades = 'territorio'; // 'territorio' | 'pontos'
+
+        // Dados da ultima carga, guardados para trocar de modo sem refazer a consulta
+        let mapaUltimoGeojson = null;
+        let mapaUltimaContagem = null;
+        let mapaUltimoMax = 0;
+
+        // Abreviacoes informais comuns que candidatos usam em vez do nome oficial.
+        // So entram aqui casos que a distancia de edicao (fuzzy match) nao pegaria,
+        // por serem siglas/atalhos e nao erros de digitacao. A troca so acontece
+        // quando a frase INTEIRA (ja sem "RS") bate com a chave \u2014 nunca troca uma
+        // palavra isolada dentro de um nome maior, senao "Caxias do Sul" viraria
+        // "Caxias do Sul do Sul" ao normalizar o proprio nome oficial do municipio.
+        const SINONIMOS_CIDADE = {
+            'poa': 'porto alegre',
+            'nh': 'novo hamburgo',
+            'cxs': 'caxias do sul',
+            'caxias': 'caxias do sul',
+            'sm': 'santa maria',
+            'pf': 'passo fundo'
+        };
+        const STOPWORDS_CIDADE = new Set(['de', 'da', 'do', 'das', 'dos']);
+
+        function removerAcentos(str) {
+            return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function normalizarNomeCidade(str) {
+            let s = removerAcentos(str).toLowerCase();
+            s = s.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!s) return '';
+            const tokens = s.split(' ').filter(t => t && t !== 'rs');
+            s = tokens.join(' ').replace(/\s+/g, ' ').trim();
+            s = s.replace(/^(cidade|municipio)\s+de\s+/, '').trim();
+            if (SINONIMOS_CIDADE[s]) s = SINONIMOS_CIDADE[s];
+            return s;
+        }
+
+        function tokensSignificativos(normalizado) {
+            return normalizado.split(' ').filter(t => t && !STOPWORDS_CIDADE.has(t)).sort().join(' ');
+        }
+
+        // Distancia de Levenshtein classica (numero minimo de edicoes entre duas strings),
+        // usada para tolerar erros de digitacao na cidade informada pelo candidato.
+        function distanciaLevenshtein(a, b) {
+            const m = a.length, n = b.length;
+            if (m === 0) return n;
+            if (n === 0) return m;
+            let anterior = new Array(n + 1);
+            let atual = new Array(n + 1);
+            for (let j = 0; j <= n; j++) anterior[j] = j;
+            for (let i = 1; i <= m; i++) {
+                atual[0] = i;
+                for (let j = 1; j <= n; j++) {
+                    const custo = a[i - 1] === b[j - 1] ? 0 : 1;
+                    atual[j] = Math.min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + custo);
+                }
+                [anterior, atual] = [atual, anterior];
+            }
+            return anterior[n];
+        }
+
+        // Calcula o centroide (ponto representativo) de um poligono/multipoligono
+        // usando a formula padrao de centroide de area (shoelace). Para multipoligonos
+        // (municipios com ilhas/partes separadas), usa a parte de maior area.
+        function centroideDeAnel(anel) {
+            let area = 0, cx = 0, cy = 0;
+            for (let i = 0; i < anel.length; i++) {
+                const [x1, y1] = anel[i];
+                const [x2, y2] = anel[(i + 1) % anel.length];
+                const cruz = x1 * y2 - x2 * y1;
+                area += cruz;
+                cx += (x1 + x2) * cruz;
+                cy += (y1 + y2) * cruz;
+            }
+            area = area / 2;
+            if (Math.abs(area) < 1e-10) {
+                const n = anel.length || 1;
+                const soma = anel.reduce((acc, [x, y]) => [acc[0] + x, acc[1] + y], [0, 0]);
+                return { lat: soma[1] / n, lng: soma[0] / n, area: 0 };
+            }
+            return { lat: cy / (6 * area), lng: cx / (6 * area), area: Math.abs(area) };
+        }
+
+        function calcularCentroide(geometry) {
+            const poligonos = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+            let melhor = null;
+            poligonos.forEach(poligono => {
+                const c = centroideDeAnel(poligono[0]);
+                if (!melhor || c.area > melhor.area) melhor = c;
+            });
+            return melhor ? [melhor.lat, melhor.lng] : null;
+        }
+
+        async function carregarGeojsonMunicipios() {
+            if (geojsonMunicipiosRS) return geojsonMunicipiosRS;
+            const resp = await fetch('rs_municipios.geojson');
+            geojsonMunicipiosRS = await resp.json();
+            geojsonMunicipiosRS.features.forEach(f => {
+                const norm = normalizarNomeCidade(f.properties.name);
+                f.properties._norm = norm;
+                f.properties._tokens = tokensSignificativos(norm);
+                f.properties._centro = calcularCentroide(f.geometry);
+            });
+            return geojsonMunicipiosRS;
+        }
+
+        // Tenta casar o texto que o candidato digitou com um municipio do RS, em
+        // ordem crescente de "ousadia": (1) igual normalizado, (2) mesmo conjunto de
+        // palavras relevantes (ignora "de/da/do"), tentando tambem so a ultima parte
+        // do texto quando ha virgula/barra (ex.: "Bairro tal, Novo Hamburgo"), e por
+        // fim (3) aproximacao por distancia de edicao, para tolerar erros de digitacao
+        // e falta de acento.
+        function encontrarMunicipioId(bruta, geojson, indiceNorm, indiceTokens) {
+            const partes = String(bruta || '').split(/[,;/]/).map(p => p.trim()).filter(Boolean);
+            const candidatas = [normalizarNomeCidade(bruta)];
+            for (let i = partes.length - 1; i >= 0; i--) candidatas.push(normalizarNomeCidade(partes[i]));
+            const unicas = [...new Set(candidatas.filter(Boolean))];
+
+            for (const norm of unicas) {
+                if (indiceNorm[norm]) return indiceNorm[norm];
+            }
+            for (const norm of unicas) {
+                const toks = tokensSignificativos(norm);
+                if (toks && indiceTokens[toks]) return indiceTokens[toks];
+            }
+
+            let melhorId = null, melhorDist = Infinity;
+            for (const norm of unicas) {
+                if (norm.length < 4) continue;
+                for (const f of geojson.features) {
+                    const alvo = f.properties._norm;
+                    if (Math.abs(alvo.length - norm.length) > 3) continue;
+                    const limite = Math.max(1, Math.floor(alvo.length * 0.22));
+                    const d = distanciaLevenshtein(norm, alvo);
+                    if (d <= limite && d < melhorDist) { melhorDist = d; melhorId = f.properties.id; }
+                }
+            }
+            return melhorId;
+        }
+
+        // Cor do territorio conforme a contagem. O 0 usa um branco levemente
+        // diferente do fundo do mapa, com contorno visivel, para o contorno dos
+        // municipios sem cadastro continuar aparecendo (nao "sumir" no fundo).
+        function corParContagem(count, max) {
+            if (!count) return '#fbfbf8';
+            const t = max > 0 ? Math.sqrt(count / max) : 0;
+            const c1 = [244, 223, 150]; // dourado claro
+            const c2 = [31, 58, 46];    // verde-negro
+            const rgb = c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+            return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        }
+
+        function raioParaContagem(count, max) {
+            if (!count) return 0;
+            const minR = 6, maxR = 34;
+            const t = max > 0 ? Math.sqrt(count / max) : 0;
+            return minR + t * (maxR - minR);
+        }
+
+        function atualizarLegendaMapa(max) {
+            const escalaEl = document.getElementById('mapaEscala');
+            escalaEl.innerHTML = '';
+            const passos = 5;
+            for (let i = 0; i <= passos; i++) {
+                if (modoMapaCidades === 'territorio') {
+                    const q = document.createElement('div');
+                    q.className = 'quadrado';
+                    const valorRef = i === 0 ? 0 : Math.max(1, Math.round((max * i) / passos));
+                    q.style.background = corParContagem(valorRef, max || 1);
+                    escalaEl.appendChild(q);
+                } else {
+                    if (i === 0) continue;
+                    const valorRef = Math.max(1, Math.round((max * i) / passos));
+                    const bola = document.createElement('div');
+                    const raio = raioParaContagem(valorRef, max || 1);
+                    bola.style.width = bola.style.height = `${raio}px`;
+                    bola.style.borderRadius = '50%';
+                    bola.style.background = '#C9A227';
+                    bola.style.border = '1px solid #8a6416';
+                    bola.style.opacity = '0.8';
+                    escalaEl.appendChild(bola);
+                }
+            }
+        }
+
+        function bindTooltipMunicipio(contagemPorId) {
+            return (f, layer) => {
+                const qtd = contagemPorId[f.properties.id] || 0;
+                layer.bindTooltip(`${f.properties.name}: ${qtd} candidato${qtd === 1 ? '' : 's'}`, { sticky: true, className: 'mapa-tooltip' });
+            };
+        }
+
+        function renderizarCamadaMapa() {
+            const geojson = mapaUltimoGeojson, contagemPorId = mapaUltimaContagem, max = mapaUltimoMax;
+            if (!geojson) return;
+
+            if (!leafletMapCidades) {
+                leafletMapCidades = L.map('mapaCidadesLeaflet', { zoomControl: true, attributionControl: false });
+            }
+            if (leafletCamadaTerritorio) { leafletCamadaTerritorio.remove(); leafletCamadaTerritorio = null; }
+            if (leafletCamadaPontos) { leafletCamadaPontos.remove(); leafletCamadaPontos = null; }
+
+            if (modoMapaCidades === 'territorio') {
+                leafletCamadaTerritorio = L.geoJSON(geojson, {
+                    style: f => ({
+                        fillColor: corParContagem(contagemPorId[f.properties.id] || 0, max),
+                        weight: 0.8,
+                        color: '#7f9482',
+                        fillOpacity: 0.92
+                    }),
+                    onEachFeature: (f, layer) => {
+                        bindTooltipMunicipio(contagemPorId)(f, layer);
+                        layer.on('mouseover', () => layer.setStyle({ weight: 2.5, color: '#C9A227' }));
+                        layer.on('mouseout', () => layer.setStyle({ weight: 0.8, color: '#7f9482' }));
+                    }
+                }).addTo(leafletMapCidades);
+            } else {
+                leafletCamadaTerritorio = L.geoJSON(geojson, {
+                    style: () => ({ fillColor: '#eef2ee', weight: 0.6, color: '#c3d0c6', fillOpacity: 0.6 })
+                }).addTo(leafletMapCidades);
+
+                leafletCamadaPontos = L.layerGroup();
+                geojson.features.forEach(f => {
+                    const qtd = contagemPorId[f.properties.id] || 0;
+                    if (!qtd || !f.properties._centro) return;
+                    const marcador = L.circleMarker(f.properties._centro, {
+                        radius: raioParaContagem(qtd, max),
+                        fillColor: '#C9A227',
+                        color: '#8a6416',
+                        weight: 1.5,
+                        fillOpacity: 0.72
+                    });
+                    marcador.bindTooltip(`${f.properties.name}: ${qtd} candidato${qtd === 1 ? '' : 's'}`, { sticky: true, className: 'mapa-tooltip' });
+                    leafletCamadaPontos.addLayer(marcador);
+                });
+                leafletCamadaPontos.addTo(leafletMapCidades);
+            }
+
+            leafletMapCidades.fitBounds(leafletCamadaTerritorio.getBounds());
+            atualizarLegendaMapa(max);
+            setTimeout(() => leafletMapCidades.invalidateSize(), 50);
+        }
+
+        function mudarModoMapa(modo) {
+            modoMapaCidades = modo;
+            document.getElementById('btnModoTerritorio').classList.toggle('active', modo === 'territorio');
+            document.getElementById('btnModoPontos').classList.toggle('active', modo === 'pontos');
+            renderizarCamadaMapa();
+        }
+
+        async function mostrarMapaCidades() {
+            ocultarTodasAsViews();
+            document.getElementById('viewMapaCidades').style.display = '';
+            document.getElementById('btnVoltarInicio').style.display = 'none';
+
+            document.getElementById('mapaRankingBody').innerHTML = '<tr><td colspan="2" class="status-carregando">Carregando dados...</td></tr>';
+            document.getElementById('mapaStatTotal').textContent = '-';
+            document.getElementById('mapaStatMunicipios').textContent = '-';
+            document.getElementById('mapaStatTop').textContent = '-';
+            document.getElementById('mapaNaoIdentificadas').textContent = '';
+
+            let geojson, data, error;
+            try {
+                [geojson, { data, error }] = await Promise.all([
+                    carregarGeojsonMunicipios(),
+                    supabaseClient.from('atualizacoes_contato').select('cidade')
+                ]);
+            } catch (e) {
+                document.getElementById('mapaRankingBody').innerHTML =
+                    `<tr><td colspan="2" class="status-carregando">Erro ao carregar o mapa: ${escapeHtml(e.message)}</td></tr>`;
+                return;
+            }
+
+            if (error) {
+                document.getElementById('mapaRankingBody').innerHTML =
+                    `<tr><td colspan="2" class="status-carregando">Erro ao carregar dados: ${escapeHtml(error.message)}</td></tr>`;
+                return;
+            }
+
+            const indiceNorm = {};
+            const indiceTokens = {};
+            geojson.features.forEach(f => {
+                indiceNorm[f.properties._norm] = f.properties.id;
+                if (f.properties._tokens) indiceTokens[f.properties._tokens] = f.properties.id;
+            });
+
+            const contagemPorId = {};
+            const naoIdentificadas = {};
+            let totalComCidade = 0;
+
+            (data || []).forEach(r => {
+                const bruta = (r.cidade || '').trim();
+                if (!bruta) return;
+                totalComCidade++;
+                const id = encontrarMunicipioId(bruta, geojson, indiceNorm, indiceTokens);
+                if (id) {
+                    contagemPorId[id] = (contagemPorId[id] || 0) + 1;
+                } else {
+                    naoIdentificadas[bruta] = (naoIdentificadas[bruta] || 0) + 1;
+                }
+            });
+
+            const max = Math.max(0, ...Object.values(contagemPorId));
+
+            let topNome = '-', topQtd = 0;
+            geojson.features.forEach(f => {
+                const q = contagemPorId[f.properties.id] || 0;
+                if (q > topQtd) { topQtd = q; topNome = f.properties.name; }
+            });
+            document.getElementById('mapaStatTotal').textContent = totalComCidade;
+            document.getElementById('mapaStatMunicipios').textContent = Object.keys(contagemPorId).length;
+            document.getElementById('mapaStatTop').textContent = topQtd > 0 ? `${topNome} (${topQtd})` : '-';
+
+            const ranking = geojson.features
+                .map(f => ({ nome: f.properties.name, qtd: contagemPorId[f.properties.id] || 0 }))
+                .filter(r => r.qtd > 0)
+                .sort((a, b) => b.qtd - a.qtd);
+            document.getElementById('mapaRankingBody').innerHTML = ranking.length
+                ? ranking.map(r => `<tr><td>${escapeHtml(r.nome)}</td><td class="qtd">${r.qtd}</td></tr>`).join('')
+                : '<tr><td colspan="2" class="status-carregando">Nenhum cadastro com cidade identificada até o momento.</td></tr>';
+
+            const totalNaoIdent = Object.values(naoIdentificadas).reduce((a, b) => a + b, 0);
+            document.getElementById('mapaNaoIdentificadas').textContent = totalNaoIdent > 0
+                ? `${totalNaoIdent} cadastro(s) com cidade não reconhecida automaticamente (grafia muito divergente) e não incluído(s) no mapa.`
+                : '';
+
+            mapaUltimoGeojson = geojson;
+            mapaUltimaContagem = contagemPorId;
+            mapaUltimoMax = max;
+            renderizarCamadaMapa();
         }
 
         let relatosAlteracao = [];
